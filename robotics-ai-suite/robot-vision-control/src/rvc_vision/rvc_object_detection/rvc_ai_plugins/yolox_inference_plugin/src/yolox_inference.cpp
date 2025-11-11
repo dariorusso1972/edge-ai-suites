@@ -311,7 +311,6 @@ bool YoloxInference::post_process_image(const cv::Mat input, rvc_vision_messages
         chosen_class = static_cast<int>(round(input.at<float>(r, 5))); // safer cast
 
         confidence = input.at<float>(r, 4);
-        confidence = input.at<float>(r, 4);
 
 	    if (confidence > confidence_threshold)
         {

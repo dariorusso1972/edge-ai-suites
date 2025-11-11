@@ -16,7 +16,7 @@ find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(rvc_vision_messages REQUIRED)
-find_package(OpenCV 4.5.3 REQUIRED)
+find_package(OpenCV REQUIRED)
 #find_package(OpenVINO REQUIRED )
 find_package(OpenVINO REQUIRED COMPONENTS Runtime ONNX )
 

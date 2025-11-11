@@ -83,11 +83,11 @@ bool YoloxInference::init(rclcpp::Node *node, const std::string &modelName)
 
     model_version = model_version_param;
 
-    RCLCPP_INFO(node->get_logger(), " OpenVINO plugin: Model Version: %d", model_version);
+    RCLCPP_INFO(node->get_logger(), " OpenVINO yolox plugin: Model Version: %d", model_version);
 
     ov::AnyMap config{{ov::hint::performance_mode.name(), ov::hint::PerformanceMode::LATENCY},{"CACHE_DIR", "/rvc/cl_cache_dir"}};
 
-    RCLCPP_INFO(node->get_logger(), "OpenVINO plugin: loading Model %s", xml_file.c_str());
+    RCLCPP_INFO(node->get_logger(), "OpenVINO yolox plugin: loading Model %s", xml_file.c_str());
 
     model = core.read_model(xml_file);
 

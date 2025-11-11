@@ -95,13 +95,13 @@ bool YoloxInference::init(rclcpp::Node *node, const std::string &modelName)
 
     for (const ov::Output<const ov::Node> input : inputs)
     {
-        RCLCPP_INFO_STREAM(rclcpp::get_logger("OI"), "    inputs");
+        RCLCPP_INFO_STREAM(rclcpp::get_logger("Yolox"), "    inputs");
 
         const std::string name = input.get_names().empty() ? "NONE" : input.get_any_name();
-        RCLCPP_INFO_STREAM(rclcpp::get_logger("OI"), "        input name: " << name);
+        RCLCPP_INFO_STREAM(rclcpp::get_logger("Yolox"), "        input name: " << name);
 
         const ov::element::Type type = input.get_element_type();
-        RCLCPP_INFO_STREAM(rclcpp::get_logger("OI"), "        input type: " << type);
+        RCLCPP_INFO_STREAM(rclcpp::get_logger("Yolox"), "        input type: " << type);
 
     }
 
@@ -117,7 +117,7 @@ bool YoloxInference::init(rclcpp::Node *node, const std::string &modelName)
 
   m_input_shape_x =  inputs[0].get_shape()[3];
   m_input_shape_y =  inputs[0].get_shape()[2];
-  RCLCPP_INFO_STREAM(rclcpp::get_logger("OI"),
+  RCLCPP_INFO_STREAM(rclcpp::get_logger("Yolox"),
                      "        input shape (reshaped): " <<  inputs[0].get_shape());
 
   m_pad_width = (resx_param - resy_param) / 2;
@@ -140,13 +140,13 @@ bool YoloxInference::init(rclcpp::Node *node, const std::string &modelName)
         .resize(ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR, m_input_shape_y, m_input_shape_x);
     model = ppp.build();
 
-    RCLCPP_INFO_STREAM(rclcpp::get_logger("OI"), " PREPROC: " << ppp);
+    RCLCPP_INFO_STREAM(rclcpp::get_logger("Yolox"), " PREPROC: " << ppp);
 
     compiledModel = core.compile_model(model, inference_device, config);
 
     uint32_t nireq = compiledModel.get_property(ov::optimal_number_of_infer_requests);
 
-    RCLCPP_INFO(rclcpp::get_logger("OI"), "optimal_number_of_infer_requests: %d", nireq);
+    RCLCPP_INFO(rclcpp::get_logger("Yolox"), "optimal_number_of_infer_requests: %d", nireq);
 
     for (uint32_t i = 0; i < nireq; ++i)
     {
@@ -167,7 +167,6 @@ bool YoloxInference::init(rclcpp::Node *node, const std::string &modelName)
 
         RCLCPP_INFO_STREAM(rclcpp::get_logger("BS"), "        fingerOutputs shape: " << o.get_partial_shape());
    
-//  break;                     
     }
 
 
@@ -263,14 +262,14 @@ bool YoloxInference::run_inference_pipeline(const cv::Mat input, cv::Mat & outpu
                 auto *lbl_ptr = output_tensor_labels.data<int64_t>();
                 for (size_t i = 0; i < num_labels; ++i)
                 {
-                    //RCLCPP_INFO(rclcpp::get_logger("OI"), "Label[%zu] = %ld", i, lbl_ptr[i]);
+                    //RCLCPP_INFO(rclcpp::get_logger("Yolox"), "Label[%zu] = %ld", i, lbl_ptr[i]);
                     labels_float.at<float>(i, 0) = static_cast<float>(lbl_ptr[i]);
                 }
             }
     
             if (labels_float.rows != boxes_float.rows)
             {
-                RCLCPP_ERROR(rclcpp::get_logger("OI"), "YOLOX output mismatch: boxes=%d labels=%d",
+                RCLCPP_ERROR(rclcpp::get_logger("Yolox"), "YOLOX output mismatch: boxes=%d labels=%d",
                         boxes_float.rows, labels_float.rows);
                 return false;
             }
@@ -285,11 +284,11 @@ bool YoloxInference::run_inference_pipeline(const cv::Mat input, cv::Mat & outpu
         }
     } catch (std::exception & e)
     {
-        RCLCPP_INFO(rclcpp::get_logger("OI"), "Exception %s", e.what());
+        RCLCPP_INFO(rclcpp::get_logger("Yolox"), "Exception %s", e.what());
         return false;
     } catch (...)
     {
-        RCLCPP_INFO(rclcpp::get_logger("OI"), "Exception !!!");
+        RCLCPP_INFO(rclcpp::get_logger("Yolox"), "Exception !!!");
         return false;
     }
     return false;
@@ -307,12 +306,11 @@ bool YoloxInference::post_process_image(const cv::Mat input, rvc_vision_messages
     //filter out any detections below the object detected threshold
     for (int r = 0; r < input.rows; ++r)
     {
-        double max_confidence = 0;
+        int chosen_class = 0;
 
-        const cv::Mat class_scores = input.row(r).colRange(5, input.cols);
+        chosen_class = static_cast<int>(round(input.at<float>(r, 5))); // safer cast
 
-        cv::minMaxLoc(class_scores, NULL, &max_confidence, NULL, &class_id_point);
-
+        confidence = input.at<float>(r, 4);
         confidence = input.at<float>(r, 4);
 
 	    if (confidence > confidence_threshold)
@@ -321,10 +319,10 @@ bool YoloxInference::post_process_image(const cv::Mat input, rvc_vision_messages
             float y = input.at<float>(r, 1);
             float w = input.at<float>(r, 2)-x;
             float h = input.at<float>(r, 3)-y;
-            boxes.push_back(cv::Rect(x, y, w, h));
+            boxes.push_back(cv::Rect(cv::Point((int)x, (int)y), cv::Size((int)w, (int)h)));
 
             confidences.push_back(confidence);
-            class_ids.push_back(class_id_point.x);
+            class_ids.push_back(chosen_class);
         }
     }
 
@@ -354,8 +352,8 @@ bool YoloxInference::post_process_image(const cv::Mat input, rvc_vision_messages
     {
         secondCount++;
 
-        RCLCPP_INFO(
-            rclcpp::get_logger("OI"), "average FPS %f frames %d seconds %d",
+        RCLCPP_DEBUG(
+            rclcpp::get_logger("Yolox"), "Average FPS %f frames %d seconds %d",
             frameRate / (float)secondCount, frameRate, secondCount);
         startTime = endTime;
 

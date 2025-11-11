@@ -308,17 +308,12 @@ bool YoloxInference::post_process_image(const cv::Mat input, rvc_vision_messages
     for (int r = 0; r < input.rows; ++r)
     {
         double max_confidence = 0;
-//        if (model_version < 8)
-        {
-            const cv::Mat class_scores = input.row(r).colRange(5, input.cols);
 
-            cv::minMaxLoc(class_scores, NULL, &max_confidence, NULL, &class_id_point);
+        const cv::Mat class_scores = input.row(r).colRange(5, input.cols);
 
-            //float object_confidence = input.at<float>(r, 4);
-            //confidence = object_confidence*max_confidence;
-            confidence = input.at<float>(r, 4);
+        cv::minMaxLoc(class_scores, NULL, &max_confidence, NULL, &class_id_point);
 
-        }
+        confidence = input.at<float>(r, 4);
 
 	    if (confidence > confidence_threshold)
         {

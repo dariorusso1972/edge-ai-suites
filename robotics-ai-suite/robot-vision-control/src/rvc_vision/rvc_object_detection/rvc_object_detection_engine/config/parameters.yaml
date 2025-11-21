@@ -6,13 +6,11 @@
     model_name: "yoloxorange"
     #Ordered array of strings: cube = 0, bolt = 1, etc, this one matched yolo_rvc_4class 
     class_name_array: [ 'cube', 'gear', 'nut', 'bolt' ]
-    #class_name_array: [ 'bolt', 'gear', 'nut', 'cube' ]
     rvc_use_case_binaries: "rvc_use_case_binaries"
 
 # plugins specific:
     inference_device: "GPU"
     model_format: "OpenVINO"
-    #model_format: "onnx"
     model_version: 5
     rvc_use_case_binaries: "rvc_use_case_binaries"
     resX: 640

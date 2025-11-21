@@ -3,7 +3,7 @@
 <package format="3">
   <name>yolox_inference_plugin</name>
   <version>2.0.0</version>
-  <description>RVC AI interface-based Plugin implementing yolox using openvino inferencing </description>
+  <description>RVC AI plugin implementing YOLOX object detection using OpenVINO for industrial parts (cube, gear, nut, bolt) </description>
   <maintainer email="robotics@intel.com">Intel Robotics Team</maintainer>
   <license>Apache-2.0</license>
 

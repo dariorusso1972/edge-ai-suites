@@ -37,8 +37,6 @@ YoloxInference::YoloxInference() :
 // TODO: check for failures
 bool YoloxInference::init(rclcpp::Node *node, const std::string &modelName)
 {
-    (void)node;
-
     node->declare_parameter<std::string>("model_format", "openvino");
     node->declare_parameter<int>("model_version", 5);
     node->declare_parameter<std::string>("inference_device", "GPU");
@@ -89,7 +87,12 @@ bool YoloxInference::init(rclcpp::Node *node, const std::string &modelName)
 
     RCLCPP_INFO(node->get_logger(), "OpenVINO yolox plugin: loading Model %s", xml_file.c_str());
 
-    model = core.read_model(xml_file);
+    try {
+        model = core.read_model(xml_file);
+    } catch (const std::exception& e) {
+        RCLCPP_ERROR(node->get_logger(), "Failed to load model %s: %s", xml_file.c_str(), e.what());
+        return false;
+    }
 
     const std::vector<ov::Output<ov::Node>> inputs = model->inputs();
 
@@ -142,7 +145,12 @@ bool YoloxInference::init(rclcpp::Node *node, const std::string &modelName)
 
     RCLCPP_INFO_STREAM(rclcpp::get_logger("Yolox"), " PREPROC: " << ppp);
 
-    compiledModel = core.compile_model(model, inference_device, config);
+    try {
+        compiledModel = core.compile_model(model, inference_device, config);
+    } catch (const std::exception& e) {
+        RCLCPP_ERROR(node->get_logger(), "Failed to compile model for device %s: %s", inference_device.c_str(), e.what());
+        return false;
+    }
 
     uint32_t nireq = compiledModel.get_property(ov::optimal_number_of_infer_requests);
 
@@ -181,7 +189,8 @@ bool YoloxInference::pre_process_image(const cv::Mat inputImage, cv::Mat & outpu
     cv::Mat output;
 
     static cv::Size nn_input_size(m_input_shape_x, m_input_shape_y);
-    static cv::Scalar border_color(114, 114, 114);
+    static constexpr int YOLOX_PAD_VALUE = 114;  // YOLOX standard padding value
+    static cv::Scalar border_color(YOLOX_PAD_VALUE, YOLOX_PAD_VALUE, YOLOX_PAD_VALUE);
 
     m_resX = inputImage.cols;
     m_resY = inputImage.rows;
@@ -282,13 +291,13 @@ bool YoloxInference::run_inference_pipeline(const cv::Mat input, cv::Mat & outpu
                 return true;
             }
         }
-    } catch (std::exception & e)
+    } catch (const std::exception& e)
     {
-        RCLCPP_INFO(rclcpp::get_logger("Yolox"), "Exception %s", e.what());
+        RCLCPP_ERROR(rclcpp::get_logger("Yolox"), "Inference failed: %s", e.what());
         return false;
     } catch (...)
     {
-        RCLCPP_INFO(rclcpp::get_logger("Yolox"), "Exception !!!");
+        RCLCPP_ERROR(rclcpp::get_logger("Yolox"), "Inference failed with unknown exception");
         return false;
     }
     return false;
